@@ -1,13 +1,10 @@
 import argparse
-
 import torch
 import torch.backends.cudnn as cudnn
 import numpy as np
 import PIL.Image as pil_image
-
 from models import RDN
-from utils import convert_rgb_to_y, denormalize, calc_psnr
-
+from utils import convert_rgb_to_y, denormalize, calc_psnr, calc_ssim
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -65,6 +62,15 @@ if __name__ == '__main__':
 
     psnr = calc_psnr(hr_y, preds_y)
     print('PSNR: {:.2f}'.format(psnr))
+
+    # 画像の次元が一致しているか確認し、一致していない場合はリサイズ
+    preds_y_np = preds_y.cpu().numpy()
+    hr_y_np = hr_y.cpu().numpy()
+    if preds_y_np.shape != hr_y_np.shape:
+        preds_y_np = preds_y_np[:hr_y_np.shape[0], :hr_y_np.shape[1]]  # 必要に応じてトリミング
+
+    ssim_value = calc_ssim(hr_y_np, preds_y_np)
+    print('SSIM: {:.4f}'.format(ssim_value))
 
     output = pil_image.fromarray(denormalize(preds).permute(1, 2, 0).byte().cpu().numpy())
     output.save(args.image_file.replace('.', '_rdn_x{}.'.format(args.scale)))
